@@ -105,7 +105,7 @@ def diff_lists(
     discrepancies: List[Discrepancy] = _simple_diff_lists(
         f"{path}[]", l1_non_compliant, l2_non_compliant
     )
-    discrepancies.extend(dict_diff(d1, d2, list_cfg, path, is_from_array=True))
+    discrepancies.extend(diff_dicts(d1, d2, list_cfg, path, is_from_array=True))
     return discrepancies
 
 
@@ -120,7 +120,7 @@ def _append_path_element(orig: str, curr: str, is_from_array: bool) -> str:
     return path
 
 
-def dict_diff(
+def diff_dicts(
     j1: dict,
     j2: dict,
     list_cfg: Dict[str, str],
@@ -142,7 +142,7 @@ def dict_diff(
                 if not isinstance(j2[k], dict):
                     discrepancies.append(Discrepancy.mod(subpath, v, j2[k]))
                 else:
-                    discrepancies.extend(dict_diff(v, j2[k], list_cfg, subpath))
+                    discrepancies.extend(diff_dicts(v, j2[k], list_cfg, subpath))
             case list():
                 list_cfg_key = re.sub(r"\[([^\]]*)\]", "[]", subpath)
                 if (
@@ -166,7 +166,7 @@ def odiff():
     j1: dict = get_aux_json("j1.json")[0]
     j2: dict = get_aux_json("j2.json")[0]
     list_cfg: Dict[str, str] = get_aux_yaml("cfg.yaml")
-    discrepancies = dict_diff(j1, j2, list_cfg)
+    discrepancies = diff_dicts(j1, j2, list_cfg)
     print(
         tabulate(
             [d.for_tabulation() for d in discrepancies],
