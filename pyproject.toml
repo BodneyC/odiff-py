@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "odiff"
+version = "0.1.0"
+description = ""
+authors = ["BodneyC <benjcarrington@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+requests = "^2.31.0"
+colorlog = "^6.8.2"
+
+tabulate = "^0.9.0"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+pytest-cov = "^5.0.0"
+skjold = "^0.6.1"
+codespell = "^2.2.6"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+addopts = [ "--import-mode=importlib", "--tb=short" ]
+pythonpath = [".", "src", "tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == \"__main__\":",
+]
+
+[tool.poetry.scripts]
+skjold = 'skjold.cli:cli'
+odiff = "odiff.main:odiff"
+
+[tool.skjold]
+report_only = false
+report_format = 'cli'
+sources = ["pyup", "github", "gemnasium", "osv", "pypa"]
+cache_dir = ".skjold_cache"
+cache_expires = 43200
+ignore_file = ".skjoldignore"
+
+[tool.codespell]
+# ignore-words-list = ""
+skip = "htmlcov,.doctrees,*.pyc,*.class,*.ico,*.out,*.PNG,*.inv,*.png,*.jpg,*.dot"
