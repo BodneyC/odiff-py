@@ -206,7 +206,7 @@ def _compare_values(
                 return [Discrepancy.mod(subpath, v1, v2)]
             return diff_dicts(v1, v2, list_cfg, subpath)
         case list():
-            list_cfg_key = re.sub(r"\[([^\]]*)\]", "[]", subpath)
+            list_cfg_key = "." + re.sub(r"\[([^\]]*)\]", "[]", subpath)
             if all_dicts(v1) and list_cfg_key in list_cfg:
                 return diff_lists(v1, v2, list_cfg, list_cfg_key, subpath)
             return _simple_diff_lists(f"{subpath}[]", v1, v2)

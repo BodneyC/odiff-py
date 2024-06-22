@@ -1,0 +1,25 @@
+{
+  "alpha": "Hello",
+  "beta": ", world",
+  "gamma": [
+    "this",
+    "isn't",
+    "an",
+    "array",
+    "not-in-eg1"
+  ],
+  "delta": [
+    {
+      "_id": "vCjpIL2A",
+      "key0": "i've been modified"
+    },
+    {
+      "_id": "H0oGHCSR",
+      "key1": "value1"
+    },
+    {
+      "_id": "Ct2fhriU",
+      "key1": "i'm added"
+    }
+  ]
+}

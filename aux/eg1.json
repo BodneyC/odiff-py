@@ -1,0 +1,21 @@
+{
+  "alpha": "Hello",
+  "beta": "world",
+  "gamma": [
+    "this",
+    "is",
+    "an",
+    "array",
+    "not-in-eg2"
+  ],
+  "delta": [
+    {
+      "_id": "vCjpIL2A",
+      "key0": "value0"
+    },
+    {
+      "_id": "H0oGHCSR",
+      "key1": "value1"
+    }
+  ]
+}
