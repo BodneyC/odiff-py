@@ -45,6 +45,7 @@ class Variant(StrEnum):
 @dataclass
 class Discrepancy:
     """Structure for a found discrepancy between object
+
     :param variant: :class:`odiff.main.Variant`, the type of discrepancy
     :param path: str, the path through the objects being compared (JQ-ish)
     :param lvalue: `typing.Any`, the value if found in the first object
@@ -58,19 +59,21 @@ class Discrepancy:
 
     def __str__(self) -> str:
         s: str = f"{self.variant} @ .{self.path} : "
-        if len(str(self.lvalue)) > TRUNC_MAX:
-            s += "\n  "
-        s += trunc(str(self.lvalue)) + " -> "
-        if len(str(self.lvalue)) > TRUNC_MAX:
-            s += "\n  "
+        multiline: bool = (
+            len(str(self.lvalue)) > TRUNC_MAX
+            or len(str(self.rvalue)) > TRUNC_MAX
+        )
+        s += "[\n  " if multiline else ""
+        s += trunc(str(self.lvalue))
+        s += "\n]" if multiline else ""
+        s += " -> "
+        s += "[\n  " if multiline else ""
         s += trunc(str(self.rvalue))
+        s += "\n]" if multiline else ""
         return s
 
     @staticmethod
     def _format_value(value: Any) -> str:
-        """Format a particular value for column-width tabulation
-        :param value: `typing.Any`, the value to be formatted
-        """
         match value:
             case list() | dict():
                 s: str = json.dumps(value, indent=2)
@@ -289,6 +292,8 @@ def odiff(args: List[str] = []) -> ExitCode:
             pprint(discrepancies)
         case OutputType.JSON:
             print(json.dumps([d.__dict__ for d in discrepancies], indent=2))
+        case OutputType.SIMPLE:
+            [print(str(d)) for d in discrepancies]
         case OutputType.TABLE:
             print(
                 tabulate(

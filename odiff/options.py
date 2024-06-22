@@ -7,6 +7,7 @@ class OutputType(StrEnum):
     JSON = "json"
     TABLE = "table"
     STRING = "string"
+    SIMPLE = "simple"
 
 
 @dataclass
