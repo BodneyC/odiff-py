@@ -1,2 +1,3 @@
+.: _id
 friends: id
 friends[].address: first
