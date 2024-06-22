@@ -2,9 +2,11 @@ from argparse import ArgumentParser, ArgumentTypeError
 from logging import INFO, Logger, getLevelName
 from typing import List
 
+from dacite import DaciteError, from_dict
+
 from odiff.logger import get_logger
-from odiff.options import CliOptions, OutputType
-from odiff.util import get_rsc_fname
+from odiff.options import CliOptions, Config, OutputType
+from odiff.util import get_rsc_fname, read_yaml_file
 
 log: Logger = get_logger("cli")
 
@@ -54,13 +56,12 @@ def parse(argv: List[str]) -> CliOptions:
         help="report output flavour",
     )
     parser.add_argument(
-        "--list-cfg",
-        "--cfg",
+        "--config",
         "-c",
         required=False,
         type=valid_file,
-        default=get_rsc_fname("list-cfg.yaml"),
-        help="yaml config file for list indices",
+        default=get_rsc_fname("cfg.yaml"),
+        help="yaml config file",
     )
     parser.add_argument(
         "files",
@@ -82,9 +83,23 @@ def parse(argv: List[str]) -> CliOptions:
                 "Invalid number of positionals (expected two)"
             )
 
+    config = Config()
+    if parsed.config:
+        obj, err = read_yaml_file(parsed.config)
+        if err:
+            raise ArgumentTypeError(
+                f"Filed to read config file: {parsed.config})"
+            )
+        try:
+            config = from_dict(
+                Config, {k.replace("-", "_"): v for k, v in obj.items()}
+            )
+        except DaciteError as e:
+            raise ArgumentTypeError(e)
+
     return CliOptions(
         output_type=parsed.output_type,
-        list_cfg_fname=parsed.list_cfg,
+        config=config,
         lfname=parsed.files[0],
         rfname=parsed.files[1],
         log_level=parsed.log_level,

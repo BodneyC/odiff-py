@@ -22,17 +22,18 @@ options:
                         log level name
   --output-type OUTPUT_TYPE, --output OUTPUT_TYPE, -o OUTPUT_TYPE
                         report output flavour
-  --list-cfg LIST_CFG, --cfg LIST_CFG, -c LIST_CFG
-                        yaml config file for list indices
+  --config CONFIG, -c CONFIG
+                        yaml config file
 ```
 
 ### Example Output
 
 ```sh
-poetry run odiff aux/eg1.json aux/eg2.json -c aux/eg-list-cfg.yaml
+poetry run odiff -c aux/eg-cfg.yaml aux/eg1.json aux/eg2.json
 ```
 
 ```txt
+[WARN:odiff] Discrepancy found for path '.alpha' but was excluded
 ╭──────────────┬────────────┬────────────────┬───────────────────────╮
 │ Variant      │ Path       │ Lvalue         │ Rvalue                │
 ├──────────────┼────────────┼────────────────┼───────────────────────┤
@@ -59,7 +60,9 @@ poetry run odiff aux/eg1.json aux/eg2.json -c aux/eg-list-cfg.yaml
 ╰──────────────┴────────────┴────────────────┴───────────────────────╯
 ```
 
-## List Index Configuration
+## Configuration
+
+### List Index Configuration
 
 You may have spotted in the [Example Output](#example-output) that we pass the `-c` option (`--list-config`) and that the output made use of this key in the children of `.delta` to "align" the list elements together - this allows us to diff matching objects despite them not necessarily being the correct order.
 
@@ -70,6 +73,12 @@ The format of this is a simple string-string, key-value pairing in YAML, e.g.:
 ```
 
 You can see it takes a [JQ](https://jqlang.github.io/jq/)-ish form for the object pathing. So, if your input is a list of object, you should provide an index for the `.` key.
+
+### Exclusions
+
+Another thing you may have spotted in the output is the log line at the top about the excluded discrepancy on `.alpha`.
+
+This is what the `.exclusions` list is for, anything you wish to ignore in either the left or right file can be listed here.
 
 ## Contributing
 

@@ -1,0 +1,4 @@
+list-indices:
+  .delta: _id
+exclusions:
+  - ".alpha"

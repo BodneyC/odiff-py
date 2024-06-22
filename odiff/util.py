@@ -28,6 +28,22 @@ def get_rsc_fname(fname: str) -> str:
     return f"{MODULE_DIR}/rsc/{fname}"
 
 
+def read_yaml_file(fname: str) -> Tuple[Dict, Optional[Exception]]:
+    data: Any = None
+    with open(fname) as f:
+        try:
+            data = yaml.load(f, Loader=yaml.SafeLoader)
+        except yaml.YAMLError as e:
+            return {}, e
+    match data:
+        case dict():
+            return data, None
+        case _:
+            return {}, Exception(
+                f"Input file not JSON or YAML list or dict: {fname}"
+            )
+
+
 def read_object_file(fname: str) -> Tuple[List | Dict, Optional[Exception]]:
     data: Any = None
     with open(fname) as f:
@@ -53,30 +69,6 @@ def read_object_file(fname: str) -> Tuple[List | Dict, Optional[Exception]]:
             )
 
 
-ListCfg = Dict[str, str]
-
-
-def read_list_cfg(
-    fname: Optional[str],
-) -> Tuple[ListCfg, Optional[Exception]]:
-    if not fname:
-        return {}, None
-    data: Any = {}
-    with open(fname) as f:
-        try:
-            data = yaml.load(f, Loader=yaml.SafeLoader)
-        except yaml.YAMLError as e:
-            return {}, e
-    if not isinstance(data, dict):
-        return {}, Exception(f"List cfg is not dict:\n{data}")
-    for k, v in data.items():
-        if not isinstance(k, str):
-            return {}, Exception(f"Key not string: {k}")
-        if not isinstance(v, str):
-            return {}, Exception(f"Value not string: {v}")
-    return data, None
-
-
 def all_dicts(lst: List[Any]) -> bool:
     return all(isinstance(e, dict) for e in lst)
 
@@ -89,7 +81,6 @@ def multiline_aware_wrap(
         if len(line) <= width:
             lines.append(line)
             continue
-        print(line)
         prefix: str = (len(line) - len(line.lstrip())) * " "
         if indent_wrapped:
             prefix += "  "

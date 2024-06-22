@@ -21,17 +21,22 @@ from tabulate import tabulate
 
 from odiff.cli import parse
 from odiff.logger import get_logger, set_default_log_level
-from odiff.options import CliOptions, OutputType
+from odiff.options import CliOptions, Config, OutputType
 from odiff.util import (
     ExitCode,
-    ListCfg,
     all_dicts,
-    read_list_cfg,
     read_object_file,
     trunc,
     TRUNC_MAX,
     multiline_aware_wrap,
 )
+
+
+log: Logger = get_logger("odiff")
+
+
+def _log_discrepency(path: str):
+    log.warn(f"Discrepancy found for path '.{path}' but was excluded")
 
 
 class Variant(StrEnum):
@@ -71,6 +76,16 @@ class Discrepancy:
         s += trunc(str(self.rvalue))
         s += "\n]" if multiline else ""
         return s
+
+    def one_line(self) -> str:
+        return " | ".join(
+            [
+                self.variant,
+                self.path,
+                trunc(str(self.lvalue)),
+                trunc(str(self.rvalue)),
+            ]
+        )
 
     @staticmethod
     def _format_value(value: Any) -> str:
@@ -150,7 +165,7 @@ def _separate_compliant_list(
 def diff_lists(
     l1: List[Any],
     l2: List[Any],
-    list_cfg: ListCfg,
+    config: Config,
     list_cfg_key: str = ".",
     path: str = "",
 ) -> Discrepancies:
@@ -178,14 +193,14 @@ def diff_lists(
     :rtype: Discrepancies
     """
     list_cfg_id: Optional[str] = None
-    if list_cfg_key in list_cfg:
-        list_cfg_id = list_cfg[list_cfg_key]
+    if list_cfg_key in config.list_indices:
+        list_cfg_id = config.list_indices[list_cfg_key]
     d1, l1_non_compliant = _separate_compliant_list(list_cfg_id, l1)
     d2, l2_non_compliant = _separate_compliant_list(list_cfg_id, l2)
     discrepancies: Discrepancies = _simple_diff_lists(
         f"{path}[]", l1_non_compliant, l2_non_compliant
     )
-    discrepancies.extend(diff_dicts(d1, d2, list_cfg, path, is_from_array=True))
+    discrepancies.extend(diff_dicts(d1, d2, config, path, is_from_array=True))
     return discrepancies
 
 
@@ -200,18 +215,25 @@ def _append_path_element(orig: str, curr: str, is_from_array: bool) -> str:
     return path
 
 
+def _path_to_key(path: str) -> str:
+    return "." + re.sub(r"\[([^\]]*)\]", "[]", path)
+
+
 def _compare_values(
-    v1: Any, v2: Any, subpath: str, list_cfg: ListCfg
+    v1: Any, v2: Any, subpath: str, config: Config
 ) -> Discrepancies:
+    if _path_to_key(subpath) in config.exclusions:
+        _log_discrepency(subpath)
+        return []
     match v1:
         case dict():
             if not isinstance(v2, dict):
                 return [Discrepancy.mod(subpath, v1, v2)]
-            return diff_dicts(v1, v2, list_cfg, subpath)
+            return diff_dicts(v1, v2, config, subpath)
         case list():
-            list_cfg_key = "." + re.sub(r"\[([^\]]*)\]", "[]", subpath)
-            if all_dicts(v1) and list_cfg_key in list_cfg:
-                return diff_lists(v1, v2, list_cfg, list_cfg_key, subpath)
+            list_cfg_key = _path_to_key(subpath)
+            if all_dicts(v1) and list_cfg_key in config.list_indices:
+                return diff_lists(v1, v2, config, list_cfg_key, subpath)
             return _simple_diff_lists(f"{subpath}[]", v1, v2)
         case _:
             if v1 != v2:
@@ -222,7 +244,7 @@ def _compare_values(
 def diff_dicts(
     d1: Dict[str, Any],
     d2: Dict[str, Any],
-    list_cfg: ListCfg,
+    config: Config,
     path: str = "",
     is_from_array: bool = False,
 ) -> Discrepancies:
@@ -242,13 +264,19 @@ def diff_dicts(
     missing_in_j1: Set[str] = d2.keys() - d1.keys()
     for k in missing_in_j1:
         subpath: str = _append_path_element(path, k, is_from_array)
+        if _path_to_key(subpath) in config.exclusions:
+            _log_discrepency(subpath)
+            continue
         discrepancies.append(Discrepancy.sub(subpath, d2[k]))
     for k, v in d1.items():
         subpath: str = _append_path_element(path, k, is_from_array)
+        if _path_to_key(subpath) in config.exclusions:
+            _log_discrepency(subpath)
+            continue
         if k not in d2:
             discrepancies.append(Discrepancy.add(subpath, d1[k]))
             continue
-        discrepancies.extend(_compare_values(v, d2[k], subpath, list_cfg))
+        discrepancies.extend(_compare_values(v, d2[k], subpath, config))
     return discrepancies
 
 
@@ -258,8 +286,7 @@ def odiff(args: List[str] = []) -> ExitCode:
     opts: CliOptions = parse(args)
 
     set_default_log_level(opts.log_level)
-
-    log: Logger = get_logger("odiff")
+    log.setLevel(opts.log_level)
 
     lobj, err = read_object_file(opts.lfname)
     if err:
@@ -270,17 +297,12 @@ def odiff(args: List[str] = []) -> ExitCode:
         log.error(f"Failed to read object file ({opts.lfname})")
         return ExitCode.USER_FAULT
 
-    list_cfg, err = read_list_cfg(opts.list_cfg_fname)
-    if err:
-        log.error(f"Failed to read list config file ({opts.list_cfg_fname})")
-        return ExitCode.USER_FAULT
-
     discrepancies: Discrepancies = []
     match lobj, robj:
         case list(), list():
-            discrepancies = diff_lists(lobj, robj, list_cfg)
+            discrepancies = diff_lists(lobj, robj, opts.config)
         case dict(), dict():
-            discrepancies = diff_dicts(lobj, robj, list_cfg)
+            discrepancies = diff_dicts(lobj, robj, opts.config)
         case _:
             log.error(
                 f"Files ({opts.lfname}, {opts.rfname}) do not have matching outer types"
@@ -294,6 +316,8 @@ def odiff(args: List[str] = []) -> ExitCode:
             print(json.dumps([d.__dict__ for d in discrepancies], indent=2))
         case OutputType.SIMPLE:
             [print(str(d)) for d in discrepancies]
+        case OutputType.ONE_LINE:
+            [print(d.one_line()) for d in discrepancies]
         case OutputType.TABLE:
             print(
                 tabulate(
