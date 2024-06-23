@@ -42,7 +42,7 @@ exclude_lines = [
 
 [tool.poetry.scripts]
 skjold = 'skjold.cli:cli'
-odiff = "odiff.main:odiff"
+odiff = "odiff.main:main"
 
 [tool.skjold]
 report_only = false
