@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Dict, List
@@ -12,7 +14,7 @@ class Config:
 class OutputType(StrEnum):
     JSON = "json"
     TABLE = "table"
-    STRING = "string"
+    OBJECT = "object"
     SIMPLE = "simple"
     ONE_LINE = "one-line"
 

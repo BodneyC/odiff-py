@@ -24,10 +24,6 @@ def trunc(s: str, n: int = TRUNC_MAX) -> str:
     return (s[:n] + "...") if len(s) > n else s
 
 
-def get_rsc_fname(fname: str) -> str:
-    return f"{MODULE_DIR}/rsc/{fname}"
-
-
 def read_yaml_file(fname: str) -> Tuple[Dict, Optional[Exception]]:
     data: Any = None
     with open(fname) as f:

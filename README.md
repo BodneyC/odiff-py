@@ -29,7 +29,7 @@ options:
 ### Example Output
 
 ```sh
-poetry run odiff -c aux/eg-cfg.yaml aux/eg1.json aux/eg2.json
+odiff -c aux/eg-cfg.yaml aux/eg1.json aux/eg2.json
 ```
 
 ```txt
@@ -58,6 +58,12 @@ poetry run odiff -c aux/eg-cfg.yaml aux/eg1.json aux/eg2.json
 │              │   vCjpIL2A │                │                       │
 │              │ ].key0     │                │                       │
 ╰──────────────┴────────────┴────────────────┴───────────────────────╯
+```
+
+Instead of using a configuration file (see [Configuration](#configuration)) you can also provide the same configuration directly in the command:
+
+```sh
+odiff aux/eg1.json aux/eg2.json --li '.delta: _id' --exc '.alpha'
 ```
 
 ## Configuration

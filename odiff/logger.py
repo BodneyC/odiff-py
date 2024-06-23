@@ -14,6 +14,17 @@ G_HANDLER.setFormatter(
 )
 
 
+VALID_LOG_LEVELS = [
+    "CRITICAL",
+    "FATAL",
+    "ERROR",
+    "WARNING",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "NOTSET",
+]
+
 DEFAULT_LOG_LEVEL = INFO
 
 

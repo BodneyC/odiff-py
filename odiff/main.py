@@ -310,7 +310,7 @@ def odiff(args: List[str] = []) -> ExitCode:
             return ExitCode.USER_FAULT
 
     match opts.output_type:
-        case OutputType.STRING:
+        case OutputType.OBJECT:
             pprint(discrepancies)
         case OutputType.JSON:
             print(json.dumps([d.__dict__ for d in discrepancies], indent=2))

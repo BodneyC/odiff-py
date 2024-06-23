@@ -1,14 +1,29 @@
+import sys
 from argparse import ArgumentParser, ArgumentTypeError
 from logging import INFO, Logger, getLevelName
+from os import access, R_OK
+from os.path import isfile
 from typing import List
 
 from dacite import DaciteError, from_dict
 
-from odiff.logger import get_logger
+from odiff.logger import VALID_LOG_LEVELS, get_logger
 from odiff.options import CliOptions, Config, OutputType
-from odiff.util import get_rsc_fname, read_yaml_file
+from odiff.util import read_yaml_file
 
 log: Logger = get_logger("cli")
+
+
+def config_from_fname(fname: str) -> Config:
+    obj, err = read_yaml_file(fname)
+    if err:
+        raise ArgumentTypeError(f"Filed to read config file: {fname})")
+    try:
+        return from_dict(
+            Config, {k.replace("-", "_"): v for k, v in obj.items()}
+        )
+    except DaciteError as e:
+        raise ArgumentTypeError(e)
 
 
 def parse(argv: List[str]) -> CliOptions:
@@ -16,16 +31,7 @@ def parse(argv: List[str]) -> CliOptions:
 
     def valid_log_level(s: str) -> int:
         s_upper = s.upper()
-        if s_upper not in [
-            "CRITICAL",
-            "FATAL",
-            "ERROR",
-            "WARNING",
-            "WARN",
-            "INFO",
-            "DEBUG",
-            "NOTSET",
-        ]:
+        if s_upper not in VALID_LOG_LEVELS:
             raise ArgumentTypeError(f"Invalid log level ({s})")
         return getLevelName(s_upper)
 
@@ -38,12 +44,8 @@ def parse(argv: List[str]) -> CliOptions:
     )
 
     def valid_file(fname: str) -> str:
-        from os import access, R_OK
-        from os.path import isfile
-
         if isfile(fname) and access(fname, R_OK):
             return fname
-
         raise ArgumentTypeError(f"File ({fname}) not readable")
 
     parser.add_argument(
@@ -59,10 +61,35 @@ def parse(argv: List[str]) -> CliOptions:
         "--config",
         "-c",
         required=False,
-        type=valid_file,
-        default=get_rsc_fname("cfg.yaml"),
+        type=config_from_fname,
         help="yaml config file",
     )
+
+    def contains_colon(s: str) -> str:
+        if len(s.split(":")) < 2:
+            raise ArgumentTypeError(f"Colon not in value: {s}")
+        return s
+
+    parser.add_argument(
+        "--list-index",
+        "--li",
+        required=False,
+        action="append",
+        type=contains_colon,
+        default=[],
+        help="list indices not in config",
+    )
+
+    parser.add_argument(
+        "--exclusion",
+        "--exc",
+        required=False,
+        action="append",
+        type=str,
+        default=[],
+        help="exclusions not in config",
+    )
+
     parser.add_argument(
         "files",
         nargs="*",
@@ -72,30 +99,20 @@ def parse(argv: List[str]) -> CliOptions:
 
     parsed = parser.parse_args(argv)
 
-    match len(parsed.files):
-        case 0:
-            parsed.files = [get_rsc_fname("j1.json"), get_rsc_fname("j2.json")]
-        case 2:
-            valid_file(parsed.files[0])
-            valid_file(parsed.files[1])
-        case _:
-            raise ArgumentTypeError(
-                "Invalid number of positionals (expected two)"
-            )
+    if len(parsed.files) != 2:
+        parser.print_usage(file=sys.stderr)
+        print("Invalid number of positionals (expected two)", file=sys.stderr)
+        exit(1)
 
-    config = Config()
-    if parsed.config:
-        obj, err = read_yaml_file(parsed.config)
-        if err:
-            raise ArgumentTypeError(
-                f"Filed to read config file: {parsed.config})"
-            )
-        try:
-            config = from_dict(
-                Config, {k.replace("-", "_"): v for k, v in obj.items()}
-            )
-        except DaciteError as e:
-            raise ArgumentTypeError(e)
+    config = parsed.config if parsed.config else Config()
+
+    for e in parsed.list_index:
+        split = e.split(":", maxsplit=1)
+        k, v = split[0].strip(), split[1].strip()
+        config.list_indices[k] = v
+
+    for e in parsed.exclusion:
+        config.exclusions.append(e)
 
     return CliOptions(
         output_type=parsed.output_type,

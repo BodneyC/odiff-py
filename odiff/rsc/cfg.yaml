@@ -1,6 +1,0 @@
-list-indices:
-  .: _id
-  .[]friends: id
-  .[]friends[].address: first
-exclusions:
-  - ".[].isActive"
