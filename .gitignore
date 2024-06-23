@@ -14,3 +14,4 @@ modules/external/*
 !modules/external/.keep
 results/*
 !results/keep
+examples

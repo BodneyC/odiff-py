@@ -1,3 +1,4 @@
+from io import SEEK_SET
 import os
 import json
 from enum import IntEnum
@@ -17,7 +18,7 @@ class ExitCode(IntEnum):
 
 
 TRUNC_MAX = 100
-TABULATION_VALUE_MAX = 40
+TABULATION_VALUE_MAX = 50
 
 
 def trunc(s: str, n: int = TRUNC_MAX) -> str:
@@ -40,7 +41,9 @@ def read_yaml_file(fname: str) -> Tuple[Dict, Optional[Exception]]:
             )
 
 
-def read_object_file(fname: str) -> Tuple[List | Dict, Optional[Exception]]:
+def read_object_file(
+    fname: str,
+) -> Tuple[List | Dict | str, Optional[Exception]]:
     data: Any = None
     with open(fname) as f:
         err: Optional[Exception] = None
@@ -49,13 +52,15 @@ def read_object_file(fname: str) -> Tuple[List | Dict, Optional[Exception]]:
             return data, None
         except yaml.YAMLError as e:
             err = e
+        f.seek(SEEK_SET)
         try:
             data = json.load(f)
             return data, None
         except json.JSONDecodeError as e:
             err = e
+        f.seek(SEEK_SET)
         if err:
-            return {}, err
+            return f.read(), err
     match data:
         case list() | dict():
             return data, None

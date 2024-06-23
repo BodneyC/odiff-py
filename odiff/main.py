@@ -220,7 +220,7 @@ def _path_to_key(path: str) -> str:
 
 
 def _compare_values(
-    v1: Any, v2: Any, subpath: str, config: Config
+    v1: Any, v2: Any, config: Config, subpath: str = ""
 ) -> Discrepancies:
     if _path_to_key(subpath) in config.exclusions:
         _log_discrepency(subpath)
@@ -276,7 +276,7 @@ def diff_dicts(
         if k not in d2:
             discrepancies.append(Discrepancy.add(subpath, d1[k]))
             continue
-        discrepancies.extend(_compare_values(v, d2[k], subpath, config))
+        discrepancies.extend(_compare_values(v, d2[k], config, subpath))
     return discrepancies
 
 
@@ -290,12 +290,16 @@ def odiff(args: List[str] = []) -> ExitCode:
 
     lobj, err = read_object_file(opts.lfname)
     if err:
-        log.error(f"Failed to read object file ({opts.lfname})")
-        return ExitCode.USER_FAULT
+        if not isinstance(lobj, str):
+            log.error(f"Failed to read object file ({opts.lfname})")
+            return ExitCode.USER_FAULT
+        log.warning(f"File not JSON or YAML, read as string ({opts.lfname})")
     robj, err = read_object_file(opts.rfname)
     if err:
-        log.error(f"Failed to read object file ({opts.lfname})")
-        return ExitCode.USER_FAULT
+        if not isinstance(robj, str):
+            log.error(f"Failed to read object file ({opts.rfname})")
+            return ExitCode.USER_FAULT
+        log.warning(f"File not JSON or YAML, read as string ({opts.rfname})")
 
     discrepancies: Discrepancies = []
     match lobj, robj:
@@ -304,10 +308,7 @@ def odiff(args: List[str] = []) -> ExitCode:
         case dict(), dict():
             discrepancies = diff_dicts(lobj, robj, opts.config)
         case _:
-            log.error(
-                f"Files ({opts.lfname}, {opts.rfname}) do not have matching outer types"
-            )
-            return ExitCode.USER_FAULT
+            discrepancies = _compare_values(lobj, robj, opts.config)
 
     match opts.output_type:
         case OutputType.OBJECT:
@@ -327,7 +328,7 @@ def odiff(args: List[str] = []) -> ExitCode:
                 )
             )
         case o:
-            log.error(f"Unknown output type ({o})")
+            log.error(f"Output type valid but not implemented ({o})")
             return ExitCode.USER_FAULT
 
     return ExitCode.CLEAN
