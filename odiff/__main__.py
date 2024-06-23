@@ -1,7 +1,3 @@
-from odiff.main import main, diff_dicts, diff_lists
+from odiff.main import main
 
-__all__ = [
-    "main",
-    "diff_lists",
-    "diff_dicts",
-]
+__all__ = ["main"]
