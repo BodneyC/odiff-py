@@ -1,0 +1,66 @@
+name: Release
+on:
+  push:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  POETRY_VERSION: '1.8.3'
+
+jobs:
+  release:
+    if: ${{ ! startsWith(github.event.head_commit.message, 'chore(') }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      - name: Build
+        run: |
+          poetry install
+          poetry build
+
+      # - name: PyPi release
+      #   run: |
+      #     poetry config pypi-token.pypi $PYPI_TOKEN
+      #     poetry publish
+      #   env:
+      #     PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+      - name: Bump
+        shell: bash
+        run: |
+          if ! latest=$(git describe --tags --abbrev=0 2>/dev/null); then
+            latest=$(git rev-list --max-parents=0 HEAD)
+          fi
+          commit_msgs=$(git log $latest..HEAD --pretty=format:%s)
+
+          commit_msg=$(
+            if grep -qs '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs"; then
+              poetry version major
+            elif grep -qs '^feat\(([^)*])\|\):' <<< "$commit_msgs"; then
+              poetry version minor
+            else
+              poetry version patch
+            fi
+          )
+
+          echo "Committing with message: $commit_msg"
+
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+          git add pyproject.toml
+          git commit -m "chore(version): $commit_msg"
+          git tag "v$(poetry version -s)"
+          git push --tags origin main

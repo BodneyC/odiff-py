@@ -110,6 +110,11 @@ def diff_values(
                 return diff_lists(v1, v2, config, list_cfg_key, subpath)
             return _simple_diff_lists(f"{subpath}[]", v1, v2)
         case _:
+            try:
+                v1 = float(v1)
+                v2 = float(v2)
+            except Exception:
+                pass
             if v1 != v2:
                 return [Discrepancy.mod(subpath, v1, v2)]
             return []
@@ -139,11 +144,13 @@ def _simple_diff_lists(
 ) -> Discrepancies:
     discrepancies: Discrepancies = []
     missing_in_l1: List[Any] = [e for e in l2 if e not in l1]
-    if len(missing_in_l1) > 0:
-        discrepancies.append(Discrepancy.sub(path, [e for e in missing_in_l1]))
     missing_in_l2: List[Any] = [e for e in l1 if e not in l2]
-    if len(missing_in_l2) > 0:
-        discrepancies.append(Discrepancy.add(path, [e for e in missing_in_l2]))
+    if len(missing_in_l1) > 0 or len(missing_in_l2) > 0:
+        discrepancies.append(
+            Discrepancy.mod(
+                path, [e for e in missing_in_l1], [e for e in missing_in_l2]
+            )
+        )
     return discrepancies
 
 

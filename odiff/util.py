@@ -30,7 +30,7 @@ def read_yaml_file(fname: str) -> Tuple[Dict, Optional[Exception]]:
     with open(fname) as f:
         try:
             data = yaml.load(f, Loader=yaml.SafeLoader)
-        except yaml.YAMLError as e:
+        except Exception as e:
             return {}, e
     match data:
         case dict():
