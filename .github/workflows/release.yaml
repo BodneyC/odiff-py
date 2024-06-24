@@ -31,12 +31,12 @@ jobs:
           poetry install
           poetry build
 
-      # - name: PyPi release
-      #   run: |
-      #     poetry config pypi-token.pypi $PYPI_TOKEN
-      #     poetry publish
-      #   env:
-      #     PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: PyPi release
+        run: |
+          poetry config pypi-token.pypi $PYPI_TOKEN
+          poetry publish
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
       - name: Bump
         shell: bash
@@ -48,10 +48,13 @@ jobs:
 
           commit_msg=$(
             if grep -qs '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs"; then
+              echo "Found breaking change, will bump major" >&2
               poetry version major
             elif grep -qs '^feat\(([^)*])\|\):' <<< "$commit_msgs"; then
+              echo "Found feature, will bump minor" >&2
               poetry version minor
             else
+              echo "Found other, will bump patch" >&2
               poetry version patch
             fi
           )
