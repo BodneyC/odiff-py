@@ -33,12 +33,7 @@ def set_default_log_level(level: int):
     DEFAULT_LOG_LEVEL = level
 
 
-def get_logger(
-    name: str,
-    level: int = DEFAULT_LOG_LEVEL,
-    handler: StreamHandler = G_HANDLER,
-) -> Logger:
+def get_logger(name: str, handler: StreamHandler = G_HANDLER) -> Logger:
     log: Logger = getLogger(name)
     log.addHandler(handler)
-    log.setLevel(level)
     return log
