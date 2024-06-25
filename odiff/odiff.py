@@ -11,6 +11,16 @@ from odiff.util import all_dicts
 log: Logger = get_logger("odiff")
 
 
+def odiff(lobj: Any, robj: Any, config: Config) -> Discrepancies:
+    match lobj, robj:
+        case list(), list():
+            return diff_lists(lobj, robj, config)
+        case dict(), dict():
+            return diff_dicts(lobj, robj, config)
+        case _:
+            return diff_values(lobj, robj, config)
+
+
 def diff_dicts(
     d1: Dict[str, Any],
     d2: Dict[str, Any],

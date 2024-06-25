@@ -9,8 +9,8 @@ from tabulate import tabulate
 from odiff.cli import parse
 from odiff.discrepancy import Discrepancies, Discrepancy
 from odiff.logger import get_logger, set_default_log_level
-from odiff.odiff import diff_values, diff_dicts, diff_lists
-from odiff.options import CliOptions, Config, OutputType
+from odiff.odiff import odiff
+from odiff.options import CliOptions, OutputType
 from odiff.util import ExitCode, read_object_file
 
 
@@ -29,7 +29,7 @@ def main(args: List[str] = []) -> ExitCode:
     if status != ExitCode.CLEAN:
         return status
 
-    discrepancies: Discrepancies = build_discrepancies(lobj, robj, opts.config)
+    discrepancies: Discrepancies = odiff(lobj, robj, opts.config)
 
     return print_discrepancies(opts.output_type, discrepancies)
 
@@ -48,16 +48,6 @@ def read_object_files(opts: CliOptions) -> Tuple[Any, Any, ExitCode]:
             return None, None, ExitCode.USER_FAULT
         log.warning(f"File not JSON or YAML, read as string ({opts.rfname})")
     return lobj, robj, ExitCode.CLEAN
-
-
-def build_discrepancies(lobj: Any, robj: Any, config: Config) -> Discrepancies:
-    match lobj, robj:
-        case list(), list():
-            return diff_lists(lobj, robj, config)
-        case dict(), dict():
-            return diff_dicts(lobj, robj, config)
-        case _:
-            return diff_values(lobj, robj, config)
 
 
 def print_discrepancies(
