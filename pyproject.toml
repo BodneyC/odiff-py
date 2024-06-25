@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "odiff"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["BodneyC <benjcarrington@gmail.com>"]
 readme = "README.md"
