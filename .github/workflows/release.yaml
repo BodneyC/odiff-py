@@ -16,6 +16,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v2
         with:
@@ -45,13 +47,6 @@ jobs:
             latest=$(git rev-list --max-parents=0 HEAD)
           fi
           commit_msgs=$(git log $latest..HEAD --pretty=format:%s)
-
-          # TODO: Remove
-          printf '%s\n' "$commit_msgs"
-          grep '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs" || true
-          grep '^feat\(([^)*])\|\):' <<< "$commit_msgs" || true
-          grep '^BREAKING CHANGE.*:' <<< "$commit_msgs" || true
-          grep '^feat.*:' <<< "$commit_msgs" || true
 
           commit_msg=$(
             if grep -qs '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs"; then
