@@ -18,7 +18,8 @@ class ExitCode(IntEnum):
 
 
 TRUNC_MAX = 100
-TABULATION_VALUE_MAX = 50
+RAW_OBJECT_COLUMN_MAX_W = 50
+PATH_COLUMN_MAX_W = 30
 
 
 def trunc(s: str, n: int = TRUNC_MAX) -> str:
@@ -74,9 +75,7 @@ def all_dicts(lst: List[Any]) -> bool:
     return all(isinstance(e, dict) for e in lst)
 
 
-def multiline_aware_wrap(
-    s: str, indent_wrapped: bool, width: int = TABULATION_VALUE_MAX
-) -> str:
+def multiline_aware_wrap(s: str, indent_wrapped: bool, width: int) -> str:
     lines = []
     for line in s.split("\n"):
         if len(line) <= width:

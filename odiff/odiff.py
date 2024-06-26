@@ -4,27 +4,35 @@ from typing import Any, Dict, Hashable, List, Optional, Set, Tuple
 
 from odiff.discrepancy import Discrepancies, Discrepancy
 from odiff.logger import get_logger
-from odiff.options import Config
+from odiff.options import OdiffConfig
 from odiff.util import all_dicts
 
 
 log: Logger = get_logger("odiff")
 
 
-def odiff(lobj: Any, robj: Any, config: Config) -> Discrepancies:
+def odiff(
+    lobj: Any,
+    robj: Any,
+    config: OdiffConfig,
+    lfname: str = "",
+    rfname: str = "",
+) -> Discrepancies:
     match lobj, robj:
         case list(), list():
-            return diff_lists(lobj, robj, config)
+            discrepancies = diff_lists(lobj, robj, config)
         case dict(), dict():
-            return diff_dicts(lobj, robj, config)
+            discrepancies = diff_dicts(lobj, robj, config)
         case _:
-            return diff_values(lobj, robj, config)
+            discrepancies = diff_values(lobj, robj, config)
+    build_unified_diffs(discrepancies, lfname, rfname)
+    return discrepancies
 
 
 def diff_dicts(
     d1: Dict[str, Any],
     d2: Dict[str, Any],
-    config: Config,
+    config: OdiffConfig,
     path: str = "",
     is_from_array: bool = False,
 ) -> Discrepancies:
@@ -63,7 +71,7 @@ def diff_dicts(
 def diff_lists(
     l1: List[Any],
     l2: List[Any],
-    config: Config,
+    config: OdiffConfig,
     list_cfg_key: str = ".",
     path: str = "",
 ) -> Discrepancies:
@@ -104,7 +112,7 @@ def diff_lists(
 
 # TODO: Just could be much more robust
 def diff_values(
-    v1: Any, v2: Any, config: Config, subpath: str = ""
+    v1: Any, v2: Any, config: OdiffConfig, subpath: str = ""
 ) -> Discrepancies:
     if _path_to_key(subpath) in config.exclusions:
         _log_discrepency(subpath)
@@ -128,6 +136,12 @@ def diff_values(
             if v1 != v2:
                 return [Discrepancy.mod(subpath, v1, v2)]
             return []
+
+
+def build_unified_diffs(
+    discrepancies: Discrepancies, lfname: str = "", rfname: str = ""
+):
+    [d.build_unified_diff(lfname, rfname) for d in discrepancies]
 
 
 def _log_discrepency(path: str):

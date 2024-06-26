@@ -46,6 +46,13 @@ jobs:
           fi
           commit_msgs=$(git log $latest..HEAD --pretty=format:%s)
 
+          # TODO: Remove
+          printf '%s\n' "$commit_msgs"
+          grep '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs" || true
+          grep '^feat\(([^)*])\|\):' <<< "$commit_msgs" || true
+          grep '^BREAKING CHANGE.*:' <<< "$commit_msgs" || true
+          grep '^feat.*:' <<< "$commit_msgs" || true
+
           commit_msg=$(
             if grep -qs '^BREAKING CHANGE\(([^)*])\|\):' <<< "$commit_msgs"; then
               echo "Found breaking change, will bump major" >&2

@@ -1,7 +1,7 @@
 import json
 import sys
 from logging import Logger
-from pprint import pprint
+from pprint import pformat
 from typing import Any, List, Tuple
 
 from tabulate import tabulate
@@ -29,9 +29,17 @@ def main(args: List[str] = []) -> ExitCode:
     if status != ExitCode.CLEAN:
         return status
 
-    discrepancies: Discrepancies = odiff(lobj, robj, opts.config)
+    discrepancies: Discrepancies = odiff(
+        lobj, robj, opts.config, opts.lfname, opts.rfname
+    )
 
-    return print_discrepancies(opts.output_type, discrepancies)
+    try:
+        print(format_discrepancies(opts.output_type, discrepancies, opts.raw))
+    except Exception as e:
+        print(repr(e))
+        return ExitCode.INTERNAL_FAULT
+
+    return ExitCode.CLEAN
 
 
 def read_object_files(opts: CliOptions) -> Tuple[Any, Any, ExitCode]:
@@ -50,30 +58,26 @@ def read_object_files(opts: CliOptions) -> Tuple[Any, Any, ExitCode]:
     return lobj, robj, ExitCode.CLEAN
 
 
-def print_discrepancies(
-    output_type: OutputType, discrepancies: Discrepancies
-) -> ExitCode:
+def format_discrepancies(
+    output_type: OutputType, discrepancies: Discrepancies, raw: bool
+) -> str:
     match output_type:
         case OutputType.OBJECT:
-            pprint(discrepancies)
+            return pformat(discrepancies)
         case OutputType.JSON:
-            print(json.dumps([d.__dict__ for d in discrepancies], indent=2))
+            return json.dumps([d.__dict__ for d in discrepancies], indent=2)
         case OutputType.SIMPLE:
-            [print(str(d)) for d in discrepancies]
+            return "\n".join([str(d) for d in discrepancies])
         case OutputType.ONE_LINE:
-            [print(d.one_line()) for d in discrepancies]
+            return "\n".join([d.one_line() for d in discrepancies])
         case OutputType.TABLE:
-            print(
-                tabulate(
-                    [d.for_tabulation() for d in discrepancies],
-                    headers=Discrepancy.tabulation_headers(),
-                    tablefmt="rounded_grid",
-                )
+            return tabulate(
+                [d.for_tabulation(raw) for d in discrepancies],
+                headers=Discrepancy.tabulation_headers(raw),
+                tablefmt="rounded_grid",
             )
         case o:
-            log.error(f"Output type is not implemented ({o})")
-            return ExitCode.USER_FAULT
-    return ExitCode.CLEAN
+            raise Exception(f"Output type is not implemented ({o})")
 
 
 if __name__ == "__main__":

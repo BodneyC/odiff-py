@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from difflib import unified_diff
 from enum import StrEnum
 import json
 import re
 from typing import Any, List
 
-from odiff.util import TRUNC_MAX, multiline_aware_wrap, trunc
+from odiff.util import (
+    RAW_OBJECT_COLUMN_MAX_W,
+    PATH_COLUMN_MAX_W,
+    TRUNC_MAX,
+    multiline_aware_wrap,
+    trunc,
+)
 
 
 class Variant(StrEnum):
@@ -31,6 +38,7 @@ class Discrepancy:
     path: str
     lvalue: Any
     rvalue: Any
+    unified_diff: str = ""
 
     def __str__(self) -> str:
         s: str = f"{self.variant} @ .{self.path} : "
@@ -48,38 +56,57 @@ class Discrepancy:
         return s
 
     def one_line(self) -> str:
-        return " | ".join(
-            [
-                self.variant,
-                self.path,
-                trunc(str(self.lvalue)),
-                trunc(str(self.rvalue)),
-            ]
+        return "|".join(
+            [self.variant, self.path, str(self.lvalue), str(self.rvalue)]
         )
 
     @staticmethod
     def _format_value(value: Any) -> str:
-        match value:
-            case list() | dict():
-                s: str = json.dumps(value, indent=2)
-                return multiline_aware_wrap(s, indent_wrapped=True)
-            case _:
-                return multiline_aware_wrap(str(value), indent_wrapped=False)
+        return multiline_aware_wrap(
+            json.dumps(value, indent=2),
+            indent_wrapped=True,
+            width=RAW_OBJECT_COLUMN_MAX_W,
+        )
 
-    def for_tabulation(self) -> List[str | Any]:
+    def for_tabulation(self, raw: bool) -> List[str | Any]:
         """Format the Discrepancy for tabulation"""
         width_path: str = re.sub(r"\[([^\]]{5,})\]", r"[\n  \1\n]", self.path)
-        return [
+        table: List[str] = [
             str(self.variant),
-            f".{width_path}",
-            self._format_value(self.lvalue),
-            self._format_value(self.rvalue),
+            multiline_aware_wrap(
+                f".{width_path}", indent_wrapped=True, width=PATH_COLUMN_MAX_W
+            ),
         ]
+        if raw:
+            table.extend(
+                [
+                    self._format_value(self.lvalue),
+                    self._format_value(self.rvalue),
+                ]
+            )
+        else:
+            table.append(
+                multiline_aware_wrap(
+                    self.unified_diff,
+                    indent_wrapped=True,
+                    width=RAW_OBJECT_COLUMN_MAX_W * 2,
+                )
+            )
+        return table
+
+    def build_unified_diff(self, lfname: str = "", rfname: str = ""):
+        larr: List[str] = json.dumps(self.lvalue, indent=2).splitlines(True)
+        rarr: List[str] = json.dumps(self.rvalue, indent=2).splitlines(True)
+        self.unified_diff = "".join(
+            unified_diff(larr, rarr, fromfile=lfname, tofile=rfname, n=10)
+        )
 
     @staticmethod
-    def tabulation_headers() -> List[str]:
+    def tabulation_headers(raw: bool) -> List[str]:
         """List of headers for use with tabulation"""
-        return ["Variant", "Path", "Lvalue", "Rvalue"]
+        if raw:
+            return ["Variant", "Path", "Lvalue", "Rvalue"]
+        return ["Variant", "Path", "Unified Diff"]
 
     @staticmethod
     def add(path: str, lvalue: Any) -> Discrepancy:

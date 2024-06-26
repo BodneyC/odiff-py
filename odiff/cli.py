@@ -8,19 +8,19 @@ from typing import List
 from dacite import DaciteError, from_dict
 
 from odiff.logger import VALID_LOG_LEVELS, get_logger
-from odiff.options import CliOptions, Config, OutputType
+from odiff.options import CliOptions, OdiffConfig, OutputType
 from odiff.util import read_yaml_file
 
 log: Logger = get_logger("cli")
 
 
-def config_from_fname(fname: str) -> Config:
+def config_from_fname(fname: str) -> OdiffConfig:
     obj, err = read_yaml_file(fname)
     if err:
         raise ArgumentTypeError(f"Filed to read config file: {fname})")
     try:
         return from_dict(
-            Config, {k.replace("-", "_"): v for k, v in obj.items()}
+            OdiffConfig, {k.replace("-", "_"): v for k, v in obj.items()}
         )
     except DaciteError as e:
         raise ArgumentTypeError(e)
@@ -81,6 +81,15 @@ def parse(argv: List[str]) -> CliOptions:
     )
 
     parser.add_argument(
+        "--raw",
+        "-r",
+        required=False,
+        action="store_true",
+        default=False,
+        help="display raw objects instead of unified diff",
+    )
+
+    parser.add_argument(
         "--exclusion",
         "--exc",
         required=False,
@@ -104,7 +113,7 @@ def parse(argv: List[str]) -> CliOptions:
         print("Invalid number of positionals (expected two)", file=sys.stderr)
         exit(1)
 
-    config = parsed.config if parsed.config else Config()
+    config = parsed.config if parsed.config else OdiffConfig()
 
     for e in parsed.list_index:
         split = e.split(":", maxsplit=1)
@@ -117,6 +126,7 @@ def parse(argv: List[str]) -> CliOptions:
     return CliOptions(
         output_type=parsed.output_type,
         config=config,
+        raw=parsed.raw,
         lfname=parsed.files[0],
         rfname=parsed.files[1],
         log_level=parsed.log_level,

@@ -4,7 +4,7 @@ from typing import Dict, List
 
 
 @dataclass
-class Config:
+class OdiffConfig:
     list_indices: Dict[str, str] = field(default_factory=dict)
     exclusions: List[str] = field(default_factory=list)
 
@@ -23,4 +23,5 @@ class CliOptions:
     lfname: str
     rfname: str
     log_level: int
-    config: Config = field(default_factory=Config)
+    raw: bool
+    config: OdiffConfig = field(default_factory=OdiffConfig)
